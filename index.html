@@ -3,42 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Калькулятор юнит-экономики фермы</title>
+<title>Ферма — масштаб, охваты и затраты</title>
 <style>
   :root{
     --bg:#f6f4fa; --surface:#ffffff; --surface-2:#f0ecf6; --border:#e6e0ef;
     --text:#1a1320; --text-dim:#695f79; --text-faint:#a096b0;
     --accent:#c81d77; --accent-soft:#fae6f1; --track:#e7e1f0;
-    --good:#1f9d6b; --good-soft:rgba(31,157,107,.12);
-    --warn:#b9791a; --warn-soft:rgba(185,121,26,.12);
-    --bad:#b64b57; --bad-soft:rgba(182,75,87,.12);
+    --views:#7a3ff2; --subs:#1f9d6b;
     --shadow:0 1px 2px rgba(26,19,32,.04),0 8px 24px rgba(26,19,32,.05);
   }
   @media (prefers-color-scheme:dark){:root{
     --bg:#110d17; --surface:#1a1422; --surface-2:#221a2d; --border:#2e2439;
     --text:#f2edf8; --text-dim:#a99fbb; --text-faint:#6d6380;
     --accent:#ff58a8; --accent-soft:#331329; --track:#271f33;
-    --good:#3fc38b; --good-soft:rgba(63,195,139,.15);
-    --warn:#e0a63a; --warn-soft:rgba(224,166,58,.15);
-    --bad:#db8a92; --bad-soft:rgba(219,138,146,.15);
+    --views:#b38bff; --subs:#3fc38b;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
   }}
   :root[data-theme="light"]{
     --bg:#f6f4fa; --surface:#ffffff; --surface-2:#f0ecf6; --border:#e6e0ef;
     --text:#1a1320; --text-dim:#695f79; --text-faint:#a096b0;
     --accent:#c81d77; --accent-soft:#fae6f1; --track:#e7e1f0;
-    --good:#1f9d6b; --good-soft:rgba(31,157,107,.12);
-    --warn:#b9791a; --warn-soft:rgba(185,121,26,.12);
-    --bad:#b64b57; --bad-soft:rgba(182,75,87,.12);
+    --views:#7a3ff2; --subs:#1f9d6b;
     --shadow:0 1px 2px rgba(26,19,32,.04),0 8px 24px rgba(26,19,32,.05);
   }
   :root[data-theme="dark"]{
     --bg:#110d17; --surface:#1a1422; --surface-2:#221a2d; --border:#2e2439;
     --text:#f2edf8; --text-dim:#a99fbb; --text-faint:#6d6380;
     --accent:#ff58a8; --accent-soft:#331329; --track:#271f33;
-    --good:#3fc38b; --good-soft:rgba(63,195,139,.15);
-    --warn:#e0a63a; --warn-soft:rgba(224,166,58,.15);
-    --bad:#db8a92; --bad-soft:rgba(219,138,146,.15);
+    --views:#b38bff; --subs:#3fc38b;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
@@ -46,54 +38,66 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
     line-height:1.5;-webkit-font-smoothing:antialiased}
   .num{font-variant-numeric:tabular-nums}
-  .wrap{max-width:1120px;margin:0 auto;padding:34px 20px 64px}
+  .wrap{max-width:960px;margin:0 auto;padding:34px 20px 64px}
   .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
   .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 8px}
-  h1{font-size:clamp(24px,4vw,36px);line-height:1.08;margin:0 0 10px;letter-spacing:-.02em;text-wrap:balance}
-  .sub{color:var(--text-dim);font-size:15px;margin:0;max-width:64ch}
+  h1{font-size:clamp(24px,4vw,34px);line-height:1.1;margin:0 0 10px;letter-spacing:-.02em;text-wrap:balance}
+  .sub{color:var(--text-dim);font-size:15px;margin:0;max-width:66ch}
   .theme-btn{flex:none;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
     border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
   .theme-btn:hover{color:var(--accent)}
 
-  .layout{display:grid;grid-template-columns:340px 1fr;gap:20px;margin-top:26px;align-items:start}
-  @media (max-width:900px){.layout{grid-template-columns:1fr}}
+  /* selector */
+  .seg-label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin:30px 0 12px}
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .seg button{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px 10px;cursor:pointer;color:var(--text);text-align:center;box-shadow:var(--shadow);
+    transition:transform .06s ease;font-family:inherit}
+  .seg button:hover{border-color:var(--accent)}
+  .seg button:active{transform:translateY(1px)}
+  .seg button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .seg .big{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .seg .cap{font-size:12px;opacity:.8;margin-top:2px}
+  .seg button.active .cap{opacity:.92}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
-  .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 18px 20px;box-shadow:var(--shadow)}
-  .panel h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin:0 0 4px}
-  .panel .hint{font-size:12px;color:var(--text-faint);margin:0 0 16px}
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 10px}
+  @media (max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+  .stat__label{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);font-weight:600;margin:0 0 8px}
+  .stat__val{font-size:25px;font-weight:800;letter-spacing:-.02em}
+  .stat.views .stat__val{color:var(--views)}
+  .stat.subs .stat__val{color:var(--subs)}
+  .stat__sub{font-size:12px;color:var(--text-dim);margin-top:3px}
 
-  .ctrl{margin-bottom:15px}
-  .ctrl__head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
-  .ctrl__label{font-size:13px;color:var(--text-dim)}
-  .ctrl__val{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
-  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:var(--track);outline:none;margin:0}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.25)}
-  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid var(--surface)}
-  input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-  .group-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:18px 0 12px;padding-top:14px;border-top:1px solid var(--border)}
-  .group-label:first-of-type{border-top:none;padding-top:0;margin-top:4px}
+  /* cost panels */
+  .costs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media (max-width:720px){.costs{grid-template-columns:1fr}}
+  .cost{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 18px 16px;box-shadow:var(--shadow)}
+  .cost h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin:0 0 14px}
+  .line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;font-size:14px}
+  .line + .line{border-top:1px dashed var(--border)}
+  .line .k{color:var(--text-dim)}
+  .line .v{font-weight:650}
+  .line.total{margin-top:8px;padding-top:12px;border-top:2px solid var(--border)}
+  .line.total .k{color:var(--text);font-weight:700}
+  .line.total .v{font-size:20px;font-weight:800;color:var(--accent)}
+  .cost .foot{font-size:12px;color:var(--text-faint);margin-top:12px;line-height:1.55}
 
-  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:18px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
-  .card__label{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);font-weight:600;margin:0 0 7px}
-  .card__val{font-size:24px;font-weight:750;letter-spacing:-.02em}
-  .card__sub{font-size:12px;color:var(--text-dim);margin-top:3px}
-
-  .tablewrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto}
+  /* table */
+  .tablewrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto;margin-top:26px}
   table{border-collapse:collapse;width:100%;min-width:520px}
   caption{caption-side:top;text-align:left;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:700;padding:16px 18px 4px}
   th,td{padding:11px 16px;text-align:right;font-size:14px;border-top:1px solid var(--border)}
   th:first-child,td:first-child{text-align:left;color:var(--text-dim);font-weight:500;font-size:13px}
-  thead th{font-size:13px;font-weight:750;color:var(--text);border-top:none;background:var(--surface-2)}
-  thead th:first-child{color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:11px}
-  tbody tr:hover td{background:var(--surface-2)}
+  thead th{font-size:14px;font-weight:750;color:var(--text);border-top:none;background:var(--surface-2);cursor:pointer}
+  thead th:first-child{color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:11px;cursor:default}
+  td.hl,th.hl{background:var(--accent-soft)}
+  thead th.hl{color:var(--accent)}
   td.v{font-weight:650}
-  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12.5px;font-weight:700}
-  .pill.good{color:var(--good);background:var(--good-soft)}
-  .pill.warn{color:var(--warn);background:var(--warn-soft)}
-  .pill.bad{color:var(--bad);background:var(--bad-soft)}
 
-  .note{margin-top:18px;font-size:12.5px;color:var(--text-faint);line-height:1.65}
+  .note{margin-top:20px;font-size:12.5px;color:var(--text-faint);line-height:1.65}
   .note b{color:var(--text-dim);font-weight:600}
 </style>
 </head>
@@ -101,224 +105,169 @@
 <div class="wrap">
   <div class="topbar">
     <div>
-      <p class="eyebrow">Instagram-ферма · модель масштабирования</p>
-      <h1>Калькулятор юнит-экономики</h1>
-      <p class="sub">Крути ползунки слева — таблица справа пересчитывается вживую по 1 / 10 / 50 / 100 телефонов. Базовые значения — из нашего теста; доходная часть — допущения, которые нужно проверять.</p>
+      <p class="eyebrow">Instagram-ферма · масштаб и затраты</p>
+      <h1>Охваты и затраты по масштабу</h1>
+      <p class="sub">Выбери масштаб — 1, 10, 50 или 100 телефонов (по 10 аккаунтов на телефон). Охваты — оценка на основе нашего теста. Доход намеренно не показываем: цифр монетизации пока нет.</p>
     </div>
     <button class="theme-btn" id="themeBtn" type="button">◐ Тема</button>
   </div>
 
-  <div class="layout">
-    <aside class="panel" aria-label="Параметры">
-      <h2>Параметры</h2>
-      <p class="hint">Всё в долларах. Курс 80 ₽/$.</p>
-      <div id="controls"></div>
-    </aside>
+  <p class="seg-label">Выбери масштаб</p>
+  <div class="seg" id="seg"></div>
 
-    <main>
-      <div class="cards" id="summary"></div>
-      <div class="tablewrap">
-        <table>
-          <caption>Прогноз по масштабу</caption>
-          <thead>
-            <tr id="thead-row"><th>Показатель</th></tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <p class="note" id="note"></p>
-    </main>
+  <div class="stats" id="stats"></div>
+  <div class="costs" id="costs"></div>
+
+  <div class="tablewrap">
+    <table>
+      <caption>Сравнение по масштабу</caption>
+      <thead><tr id="thead-row"><th>Показатель</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
   </div>
+
+  <p class="note" id="note"></p>
 </div>
 
 <script>
 "use strict";
 (function(){
-  var SCALES = [1, 10, 50, 100]; // телефоны
-  var TARGET = 10000;            // ориентир прибыли/мес, $
+  // ---- фиксированные допущения ----
+  var ACC_PER_PHONE   = 10;      // аккаунтов на телефон
+  var SURVIVAL        = 0.80;    // ~80% выжили (в тесте 8 из 10)
+  var VIEWS_PER_ACC   = 908;     // просмотров/мес на аккаунт (тест: 9079 / 10)
+  var SUBS_PER_ACC    = 5.9;     // подписчиков/мес на аккаунт (тест: 59 / 10)
+  // затраты
+  var SOFTWARE        = 175;     // разово, одна лицензия на всё
+  var PHONE_PRICE     = 25;      // за телефон
+  var ACC_PRICE       = 2.5;     // за аккаунт
+  var CLAUDE_MONTH    = 200;     // подписка/автоматизация в мес (на весь парк)
+  var CHURN_MONTH     = 0.40/3;  // замена: ~40% гибнут за 3 мес -> доля в месяц
 
-  var GROUPS = [
-    {title:"Масштаб и парк", ctrls:[
-      {id:"accPerPhone", label:"Аккаунтов на телефон", min:1, max:30, step:1, val:10, unit:""},
-      {id:"death", label:"Смертность аккаунтов", min:0, max:90, step:5, val:40, unit:"%"},
-      {id:"horizon", label:"Горизонт замены мёртвых", min:1, max:12, step:1, val:3, unit:" мес"},
-    ]},
-    {title:"Затраты", ctrls:[
-      {id:"phonePrice", label:"Цена телефона", min:0, max:400, step:5, val:25, unit:"$", money:true},
-      {id:"accPrice", label:"Цена аккаунта", min:0, max:10, step:0.5, val:2.5, unit:"$", money:true},
-      {id:"software", label:"Софт (разово, на всё)", min:0, max:1000, step:25, val:175, unit:"$", money:true},
-      {id:"claude", label:"Claude / автоматизация в мес", min:0, max:1000, step:50, val:200, unit:"$", money:true},
-      {id:"proxyPer", label:"Прокси на аккаунт / мес (0 = без)", min:0, max:15, step:0.5, val:0, unit:"$", money:true},
-    ]},
-    {title:"Доход (допущения)", ctrls:[
-      {id:"views", label:"Просмотров на живой акк / мес", min:0, max:5000, step:50, val:500, unit:""},
-      {id:"ctr", label:"Просмотр → клик по продукту", min:0, max:20, step:0.5, val:1.5, unit:"%"},
-      {id:"conv", label:"Клик → покупка", min:0, max:20, step:0.5, val:3, unit:"%"},
-      {id:"margin", label:"Маржа с одной продажи", min:0, max:300, step:5, val:20, unit:"$", money:true},
-    ]},
-  ];
+  var SCALES = [1, 10, 50, 100]; // телефоны
+  var selected = 3;              // по умолчанию 100 телефонов
 
   function fmtNum(n){
     n = Math.round(n);
-    var s = Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    var s = Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return (n < 0 ? "-" : "") + s;
   }
-  function fmtMoney(n){ return isFinite(n) ? "$" + fmtNum(n) : "—"; }
+  function money(n){ return "$" + fmtNum(n); }
+  function moneyExact(n){ return "$" + (Number.isInteger(n) ? fmtNum(n) : (Math.round(n * 10) / 10)); }
 
-  var byId = {};
+  function model(phones){
+    var accounts = phones * ACC_PER_PHONE;
+    var living   = accounts * SURVIVAL;
+    var views    = accounts * VIEWS_PER_ACC;   // тест уже net (с учётом банов)
+    var subs     = accounts * SUBS_PER_ACC;
 
-  function buildControls(){
-    var root = document.getElementById("controls");
-    GROUPS.forEach(function(group){
-      var gl = document.createElement("div");
-      gl.className = "group-label";
-      gl.textContent = group.title;
-      root.appendChild(gl);
-      group.ctrls.forEach(function(c){
-        byId[c.id] = c;
-        var wrap = document.createElement("div");
-        wrap.className = "ctrl";
-        var head = document.createElement("div");
-        head.className = "ctrl__head";
-        var lab = document.createElement("span");
-        lab.className = "ctrl__label";
-        lab.textContent = c.label;
-        var val = document.createElement("span");
-        val.className = "ctrl__val";
-        val.id = "val-" + c.id;
-        head.appendChild(lab); head.appendChild(val);
-        var input = document.createElement("input");
-        input.type = "range";
-        input.id = "in-" + c.id;
-        input.min = c.min; input.max = c.max; input.step = c.step; input.value = c.val;
-        input.addEventListener("input", function(){ c.val = parseFloat(input.value); render(); });
-        wrap.appendChild(head); wrap.appendChild(input);
-        root.appendChild(wrap);
-      });
+    var phonesCost = phones * PHONE_PRICE;
+    var accCost    = accounts * ACC_PRICE;
+    var startup    = SOFTWARE + phonesCost + accCost;
+
+    var replace = accounts * CHURN_MONTH * ACC_PRICE;
+    var monthly = CLAUDE_MONTH + replace;
+
+    return {phones:phones, accounts:accounts, living:living, views:views, subs:subs,
+      software:SOFTWARE, phonesCost:phonesCost, accCost:accCost, startup:startup,
+      claude:CLAUDE_MONTH, replace:replace, monthly:monthly};
+  }
+
+  function buildSeg(){
+    var seg = document.getElementById("seg");
+    seg.innerHTML = SCALES.map(function(p, i){
+      return '<button type="button" data-i="'+i+'"><div class="big num">'+p+'</div>' +
+             '<div class="cap">'+(p===1?"телефон":"телефонов")+'</div></button>';
+    }).join("");
+    Array.prototype.forEach.call(seg.querySelectorAll("button"), function(b){
+      b.addEventListener("click", function(){ selected = +b.getAttribute("data-i"); render(); });
     });
   }
 
-  function ctrlText(c){
-    var v = c.val;
-    if(c.money){
-      var s = Number.isInteger(v) ? fmtNum(v) : (Math.round(v * 10) / 10).toString();
-      return "$" + s;
-    }
-    if(c.unit === "%") return v + "%";
-    return fmtNum(v) + c.unit;
-  }
-
-  function scenario(phones){
-    var accPerPhone = byId.accPerPhone.val;
-    var death = byId.death.val / 100;
-    var horizon = byId.horizon.val;
-    var phonePrice = byId.phonePrice.val;
-    var accPrice = byId.accPrice.val;
-    var software = byId.software.val;
-    var claude = byId.claude.val;
-    var proxyPer = byId.proxyPer.val;
-    var views = byId.views.val;
-    var ctr = byId.ctr.val / 100;
-    var conv = byId.conv.val / 100;
-    var margin = byId.margin.val;
-
-    var accounts = phones * accPerPhone;
-    var living = accounts * (1 - death);
-    var reach = living * views;
-
-    var startup = software + phones * phonePrice + accounts * accPrice;
-    var monthlyChurn = horizon > 0 ? death / horizon : 0;      // доля парка, гибнущая в месяц
-    var replacement = accounts * monthlyChurn * accPrice;      // докупка на замену
-    var proxy = living * proxyPer;
-    var monthly = claude + replacement + proxy;
-
-    var sales = reach * ctr * conv;
-    var revenue = sales * margin;
-    var profit = revenue - monthly;
-    var payback = profit > 0 ? startup / profit : Infinity;
-
-    return {phones:phones, accounts:accounts, living:living, reach:reach,
-      startup:startup, monthly:monthly, revenue:revenue, sales:sales,
-      profit:profit, payback:payback};
-  }
-
-  function profitPill(p){
-    var cls = p >= TARGET ? "good" : (p > 0 ? "warn" : "bad");
-    return '<span class="pill ' + cls + '">' + fmtMoney(p) + '</span>';
-  }
-
-  var ROWS = [
-    {label:"Аккаунтов всего", get:function(s){return fmtNum(s.accounts);}},
-    {label:"Живых аккаунтов", get:function(s){return fmtNum(s.living);}},
-    {label:"Охват, просмотров / мес", get:function(s){return fmtNum(s.reach);}},
-    {label:"Продаж / мес", get:function(s){return fmtNum(s.sales);}},
-    {label:"Стартовые вложения", get:function(s){return fmtMoney(s.startup);}, cls:"v"},
-    {label:"Расходы / мес", get:function(s){return fmtMoney(s.monthly);}, cls:"v"},
-    {label:"Выручка / мес", get:function(s){return fmtMoney(s.revenue);}, cls:"v"},
-    {label:"Прибыль / мес", get:function(s){return profitPill(s.profit);}, raw:true},
-    {label:"Окупаемость", get:function(s){return isFinite(s.payback) ? (Math.round(s.payback*10)/10 + " мес") : "—";}},
-  ];
-
   function render(){
-    // значения ползунков
-    GROUPS.forEach(function(g){ g.ctrls.forEach(function(c){
-      document.getElementById("val-" + c.id).textContent = ctrlText(c);
-    });});
+    var seg = document.getElementById("seg");
+    Array.prototype.forEach.call(seg.querySelectorAll("button"), function(b){
+      b.classList.toggle("active", +b.getAttribute("data-i") === selected);
+    });
 
-    var scen = SCALES.map(scenario);
+    var m = model(SCALES[selected]);
 
-    // заголовок таблицы
-    var thead = document.getElementById("thead-row");
-    thead.innerHTML = "<th>Показатель</th>" + SCALES.map(function(p){
-      return "<th>" + p + " тел.</th>";
+    // карточки
+    document.getElementById("stats").innerHTML = [
+      {c:"", l:"Аккаунтов", v:fmtNum(m.accounts), s:m.phones+" тел. × "+ACC_PER_PHONE},
+      {c:"", l:"Живых (~80%)", v:fmtNum(m.living), s:"по тесту 8 из 10"},
+      {c:"views", l:"Просмотров / мес", v:fmtNum(m.views), s:"оценка по тесту"},
+      {c:"subs", l:"Новых подписчиков / мес", v:fmtNum(m.subs), s:"оценка по тесту"},
+    ].map(function(s){
+      return '<div class="stat '+s.c+'"><p class="stat__label">'+s.l+'</p>' +
+             '<div class="stat__val num">'+s.v+'</div><div class="stat__sub">'+s.s+'</div></div>';
     }).join("");
 
-    // тело
-    var tbody = document.getElementById("tbody");
-    tbody.innerHTML = ROWS.map(function(row){
-      var cells = scen.map(function(s){
-        var v = row.get(s);
-        return "<td class='num " + (row.cls||"") + "'>" + v + "</td>";
-      }).join("");
-      return "<tr><td>" + row.label + "</td>" + cells + "</tr>";
-    }).join("");
+    // затраты
+    document.getElementById("costs").innerHTML =
+      '<div class="cost"><h3>Стартовые вложения · разово</h3>' +
+        line("Софт (1 лицензия на всё)", money(m.software)) +
+        line("Телефоны · "+m.phones+" × "+moneyExact(PHONE_PRICE), money(m.phonesCost)) +
+        line("Аккаунты · "+fmtNum(m.accounts)+" × "+moneyExact(ACC_PRICE), money(m.accCost)) +
+        line("Итого старт", money(m.startup), true) +
+        '<p class="foot">Софт — один раз навсегда, безлимит телефонов.</p></div>' +
+      '<div class="cost"><h3>Расходы в месяц</h3>' +
+        line("Claude / автоматизация", money(m.claude)) +
+        line("Замена умерших аккаунтов", money(m.replace)) +
+        line("Итого в месяц", money(m.monthly), true) +
+        '<p class="foot">Прокси не считаем — опция. Если включить активно: +$100+/мес.</p></div>';
 
-    // карточки — по сценарию 100 телефонов
-    var big = scen[scen.length - 1];
-    var cards = [
-      {l:"Прибыль / мес · 100 тел.", v:fmtMoney(big.profit), s:big.profit>=TARGET?"цель достигнута":"ниже цели $10k"},
-      {l:"Выручка / мес · 100 тел.", v:fmtMoney(big.revenue), s:fmtNum(big.living)+" живых аккаунтов"},
-      {l:"Стартовые вложения · 100 тел.", v:fmtMoney(big.startup), s:"разово"},
-      {l:"Окупаемость · 100 тел.", v:isFinite(big.payback)?(Math.round(big.payback*10)/10+" мес"):"—", s:"при текущих допущениях"},
+    // таблица
+    var scen = SCALES.map(model);
+    document.getElementById("thead-row").innerHTML = "<th>Показатель</th>" + SCALES.map(function(p,i){
+      return "<th class='"+(i===selected?"hl":"")+"' data-i='"+i+"'>"+p+" тел.</th>";
+    }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll("#thead-row th[data-i]"), function(th){
+      th.addEventListener("click", function(){ selected = +th.getAttribute("data-i"); render(); });
+    });
+
+    var rows = [
+      {l:"Аккаунтов всего", g:function(s){return fmtNum(s.accounts);}},
+      {l:"Живых аккаунтов", g:function(s){return fmtNum(s.living);}},
+      {l:"Просмотров / мес", g:function(s){return fmtNum(s.views);}},
+      {l:"Подписчиков / мес", g:function(s){return fmtNum(s.subs);}},
+      {l:"Стартовые вложения", g:function(s){return money(s.startup);}, cls:"v"},
+      {l:"Расходы / мес", g:function(s){return money(s.monthly);}, cls:"v"},
     ];
-    document.getElementById("summary").innerHTML = cards.map(function(c){
-      return '<div class="card"><p class="card__label">'+c.l+'</p><div class="card__val num">'+c.v+'</div><div class="card__sub">'+c.s+'</div></div>';
+    document.getElementById("tbody").innerHTML = rows.map(function(r){
+      var cells = scen.map(function(s,i){
+        return "<td class='num "+(r.cls||"")+" "+(i===selected?"hl":"")+"'>"+r.g(s)+"</td>";
+      }).join("");
+      return "<tr><td>"+r.l+"</td>"+cells+"</tr>";
     }).join("");
 
     document.getElementById("note").innerHTML =
-      '<b>Как читать.</b> Слева допущения, справа — прогноз при 1/10/50/100 телефонах (по 10 аккаунтов на телефон). ' +
-      'Прибыль зелёная при ≥ $10 000/мес, жёлтая — в плюсе, красная — в минусе. ' +
-      '<b>Затраты</b> посчитаны от реального теста (телефон $25, аккаунт $2–3, софт $175 разово, Claude $200/мес, содержание ≈ 0). ' +
-      '<b>Доход</b> — это гипотеза: охват × клик по продукту × покупка × маржа. Точных цифр воронки пока нет — их и надо нащупать. ' +
-      'Смертность аккаунтов по умолчанию 40% на 2–3 мес (в тесте было 20% за короткий срок).';
+      '<b>Откуда цифры.</b> Затраты — из реального теста: телефон $25, аккаунт $2.5, софт $175 разово, ' +
+      'Claude $200/мес, содержание ≈ 0. <b>Охваты</b> — линейная экстраполяция нашего теста ' +
+      '(10 аккаунтов дали ~9 000 просмотров и ~59 подписчиков за месяц). ' +
+      'Важно: большая часть охвата в тесте пришла с одного «залетевшего» аккаунта, поэтому реальные ' +
+      'числа будут гулять — это ориентир, а не гарантия. <b>Доход не показан намеренно</b>: ' +
+      'модель монетизации ещё не определена.';
+  }
+
+  function line(k, v, total){
+    return '<div class="line'+(total?" total":"")+'"><span class="k">'+k+'</span><span class="v num">'+v+'</span></div>';
   }
 
   // тема
   (function(){
     var btn = document.getElementById("themeBtn");
-    function apply(t){ if(t) document.documentElement.setAttribute("data-theme", t); }
-    try{ apply(localStorage.getItem("farmcalc-theme")); }catch(e){}
+    try{ var t = localStorage.getItem("farmcalc-theme"); if(t) document.documentElement.setAttribute("data-theme", t); }catch(e){}
     btn.addEventListener("click", function(){
       var cur = document.documentElement.getAttribute("data-theme");
-      var dark = cur ? cur === "dark"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var dark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
       var next = dark ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
       try{ localStorage.setItem("farmcalc-theme", next); }catch(e){}
     });
   })();
 
-  buildControls();
+  buildSeg();
   render();
 })();
 </script>
