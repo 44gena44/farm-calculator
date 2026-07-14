@@ -47,8 +47,8 @@
     border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
   .theme-btn:hover{color:var(--accent)}
 
-  /* selector */
-  .seg-label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin:30px 0 12px}
+  /* selectors */
+  .seg-label{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin:28px 0 12px}
   .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
   .seg button{background:var(--surface);border:1px solid var(--border);border-radius:14px;
     padding:16px 10px;cursor:pointer;color:var(--text);text-align:center;box-shadow:var(--shadow);
@@ -60,6 +60,8 @@
   .seg .cap{font-size:12px;opacity:.8;margin-top:2px}
   .seg button.active .cap{opacity:.92}
   .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .seg--sm button{padding:11px 8px}
+  .seg--sm .big{font-size:20px}
 
   /* stat cards */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 10px}
@@ -107,20 +109,23 @@
     <div>
       <p class="eyebrow">Instagram-ферма · масштаб и затраты</p>
       <h1>Охваты и затраты по масштабу</h1>
-      <p class="sub">Выбери масштаб — 1, 10, 50 или 100 телефонов (по 10 аккаунтов на телефон). Охваты — оценка на основе нашего теста. Доход намеренно не показываем: цифр монетизации пока нет.</p>
+      <p class="sub">Выбери масштаб и смертность аккаунтов — таблица и охваты пересчитаются. Охваты — оценка на основе нашего теста. Доход намеренно не показываем: цифр монетизации пока нет.</p>
     </div>
     <button class="theme-btn" id="themeBtn" type="button">◐ Тема</button>
   </div>
 
-  <p class="seg-label">Выбери масштаб</p>
+  <p class="seg-label">Масштаб · телефонов (по 10 аккаунтов)</p>
   <div class="seg" id="seg"></div>
+
+  <p class="seg-label">Смертность аккаунтов за 2–3 месяца</p>
+  <div class="seg seg--sm" id="seg2"></div>
 
   <div class="stats" id="stats"></div>
   <div class="costs" id="costs"></div>
 
   <div class="tablewrap">
     <table>
-      <caption>Сравнение по масштабу</caption>
+      <caption id="tcap">Сравнение по масштабу</caption>
       <thead><tr id="thead-row"><th>Показатель</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
@@ -133,19 +138,25 @@
 "use strict";
 (function(){
   // ---- фиксированные допущения ----
-  var ACC_PER_PHONE   = 10;      // аккаунтов на телефон
-  var SURVIVAL        = 0.80;    // ~80% выжили (в тесте 8 из 10)
-  var VIEWS_PER_ACC   = 908;     // просмотров/мес на аккаунт (тест: 9079 / 10)
-  var SUBS_PER_ACC    = 5.9;     // подписчиков/мес на аккаунт (тест: 59 / 10)
+  var ACC_PER_PHONE     = 10;     // аккаунтов на телефон
+  var VIEWS_PER_LIVING  = 1135;   // просмотров/мес на ЖИВОЙ аккаунт (тест: 9079 / 8)
+  var SUBS_PER_LIVING   = 7.4;    // подписчиков/мес на ЖИВОЙ аккаунт (тест: 59 / 8)
   // затраты
-  var SOFTWARE        = 175;     // разово, одна лицензия на всё
-  var PHONE_PRICE     = 25;      // за телефон
-  var ACC_PRICE       = 2.5;     // за аккаунт
-  var CLAUDE_MONTH    = 200;     // подписка/автоматизация в мес (на весь парк)
-  var CHURN_MONTH     = 0.40/3;  // замена: ~40% гибнут за 3 мес -> доля в месяц
+  var SOFTWARE          = 175;    // разово, одна лицензия на всё
+  var PHONE_PRICE       = 25;     // за телефон
+  var ACC_PRICE         = 2.5;    // за аккаунт
+  var CLAUDE_MONTH      = 200;    // подписка/автоматизация в мес (на весь парк)
+  var CHURN_HORIZON     = 3;      // за сколько месяцев раскладываем смертность
 
-  var SCALES = [1, 10, 50, 100]; // телефоны
-  var selected = 3;              // по умолчанию 100 телефонов
+  var SCALES = [1, 10, 50, 100];  // телефоны
+  var DEATHS = [                   // смертность аккаунтов
+    {rate:0.20, cap:"тест"},
+    {rate:0.30, cap:"2–3 мес"},
+    {rate:0.40, cap:"2–3 мес"},
+    {rate:0.50, cap:"2–3 мес"},
+  ];
+  var selScale = 3;   // 100 телефонов
+  var selDeath = 2;   // 40%
 
   function fmtNum(n){
     n = Math.round(n);
@@ -153,19 +164,20 @@
     return (n < 0 ? "-" : "") + s;
   }
   function money(n){ return "$" + fmtNum(n); }
-  function moneyExact(n){ return "$" + (Number.isInteger(n) ? fmtNum(n) : (Math.round(n * 10) / 10)); }
+  function moneyExact(n){ return "$" + (Number.isInteger(n) ? fmtNum(n) : (Math.round(n*10)/10)); }
+  function pct(x){ return Math.round(x*100) + "%"; }
 
-  function model(phones){
+  function model(phones, death){
     var accounts = phones * ACC_PER_PHONE;
-    var living   = accounts * SURVIVAL;
-    var views    = accounts * VIEWS_PER_ACC;   // тест уже net (с учётом банов)
-    var subs     = accounts * SUBS_PER_ACC;
+    var living   = accounts * (1 - death);
+    var views    = living * VIEWS_PER_LIVING;
+    var subs     = living * SUBS_PER_LIVING;
 
     var phonesCost = phones * PHONE_PRICE;
     var accCost    = accounts * ACC_PRICE;
     var startup    = SOFTWARE + phonesCost + accCost;
 
-    var replace = accounts * CHURN_MONTH * ACC_PRICE;
+    var replace = accounts * (death / CHURN_HORIZON) * ACC_PRICE; // докупка на замену/мес
     var monthly = CLAUDE_MONTH + replace;
 
     return {phones:phones, accounts:accounts, living:living, views:views, subs:subs,
@@ -173,29 +185,43 @@
       claude:CLAUDE_MONTH, replace:replace, monthly:monthly};
   }
 
-  function buildSeg(){
+  function buildSegs(){
     var seg = document.getElementById("seg");
-    seg.innerHTML = SCALES.map(function(p, i){
+    seg.innerHTML = SCALES.map(function(p,i){
       return '<button type="button" data-i="'+i+'"><div class="big num">'+p+'</div>' +
              '<div class="cap">'+(p===1?"телефон":"телефонов")+'</div></button>';
     }).join("");
     Array.prototype.forEach.call(seg.querySelectorAll("button"), function(b){
-      b.addEventListener("click", function(){ selected = +b.getAttribute("data-i"); render(); });
+      b.addEventListener("click", function(){ selScale = +b.getAttribute("data-i"); render(); });
+    });
+
+    var seg2 = document.getElementById("seg2");
+    seg2.innerHTML = DEATHS.map(function(d,i){
+      return '<button type="button" data-i="'+i+'"><div class="big num">'+pct(d.rate)+'</div>' +
+             '<div class="cap">'+d.cap+'</div></button>';
+    }).join("");
+    Array.prototype.forEach.call(seg2.querySelectorAll("button"), function(b){
+      b.addEventListener("click", function(){ selDeath = +b.getAttribute("data-i"); render(); });
     });
   }
 
   function render(){
-    var seg = document.getElementById("seg");
-    Array.prototype.forEach.call(seg.querySelectorAll("button"), function(b){
-      b.classList.toggle("active", +b.getAttribute("data-i") === selected);
+    var death = DEATHS[selDeath].rate;
+
+    Array.prototype.forEach.call(document.querySelectorAll("#seg button"), function(b){
+      b.classList.toggle("active", +b.getAttribute("data-i") === selScale);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#seg2 button"), function(b){
+      b.classList.toggle("active", +b.getAttribute("data-i") === selDeath);
     });
 
-    var m = model(SCALES[selected]);
+    var m = model(SCALES[selScale], death);
+    var deathTxt = "смертность " + pct(death) + (selDeath === 0 ? " (тест)" : " · 2–3 мес");
 
     // карточки
     document.getElementById("stats").innerHTML = [
-      {c:"", l:"Аккаунтов", v:fmtNum(m.accounts), s:m.phones+" тел. × "+ACC_PER_PHONE},
-      {c:"", l:"Живых (~80%)", v:fmtNum(m.living), s:"по тесту 8 из 10"},
+      {c:"", l:"Аккаунтов куплено", v:fmtNum(m.accounts), s:m.phones+" тел. × "+ACC_PER_PHONE},
+      {c:"", l:"Живых аккаунтов", v:fmtNum(m.living), s:deathTxt},
       {c:"views", l:"Просмотров / мес", v:fmtNum(m.views), s:"оценка по тесту"},
       {c:"subs", l:"Новых подписчиков / мес", v:fmtNum(m.subs), s:"оценка по тесту"},
     ].map(function(s){
@@ -213,17 +239,18 @@
         '<p class="foot">Софт — один раз навсегда, безлимит телефонов.</p></div>' +
       '<div class="cost"><h3>Расходы в месяц</h3>' +
         line("Claude / автоматизация", money(m.claude)) +
-        line("Замена умерших аккаунтов", money(m.replace)) +
+        line("Замена умерших ("+pct(death)+" за "+CHURN_HORIZON+" мес)", money(m.replace)) +
         line("Итого в месяц", money(m.monthly), true) +
         '<p class="foot">Прокси не считаем — опция. Если включить активно: +$100+/мес.</p></div>';
 
-    // таблица
-    var scen = SCALES.map(model);
+    // таблица (под выбранную смертность)
+    var scen = SCALES.map(function(p){ return model(p, death); });
+    document.getElementById("tcap").textContent = "Сравнение по масштабу · смертность " + pct(death);
     document.getElementById("thead-row").innerHTML = "<th>Показатель</th>" + SCALES.map(function(p,i){
-      return "<th class='"+(i===selected?"hl":"")+"' data-i='"+i+"'>"+p+" тел.</th>";
+      return "<th class='"+(i===selScale?"hl":"")+"' data-i='"+i+"'>"+p+" тел.</th>";
     }).join("");
     Array.prototype.forEach.call(document.querySelectorAll("#thead-row th[data-i]"), function(th){
-      th.addEventListener("click", function(){ selected = +th.getAttribute("data-i"); render(); });
+      th.addEventListener("click", function(){ selScale = +th.getAttribute("data-i"); render(); });
     });
 
     var rows = [
@@ -236,18 +263,18 @@
     ];
     document.getElementById("tbody").innerHTML = rows.map(function(r){
       var cells = scen.map(function(s,i){
-        return "<td class='num "+(r.cls||"")+" "+(i===selected?"hl":"")+"'>"+r.g(s)+"</td>";
+        return "<td class='num "+(r.cls||"")+" "+(i===selScale?"hl":"")+"'>"+r.g(s)+"</td>";
       }).join("");
       return "<tr><td>"+r.l+"</td>"+cells+"</tr>";
     }).join("");
 
     document.getElementById("note").innerHTML =
-      '<b>Откуда цифры.</b> Затраты — из реального теста: телефон $25, аккаунт $2.5, софт $175 разово, ' +
-      'Claude $200/мес, содержание ≈ 0. <b>Охваты</b> — линейная экстраполяция нашего теста ' +
-      '(10 аккаунтов дали ~9 000 просмотров и ~59 подписчиков за месяц). ' +
-      'Важно: большая часть охвата в тесте пришла с одного «залетевшего» аккаунта, поэтому реальные ' +
-      'числа будут гулять — это ориентир, а не гарантия. <b>Доход не показан намеренно</b>: ' +
-      'модель монетизации ещё не определена.';
+      '<b>Смертность.</b> В коротком тесте умерло 20% (2 из 10). На дистанции 2–3 месяца закладываем ' +
+      '30–50% — переключай кнопками, живых аккаунтов и охват пересчитываются, в расходах растёт замена. ' +
+      '<b>Охваты</b> — от теста: живой аккаунт даёт ~1 135 просмотров и ~7 подписчиков в месяц ' +
+      '(9 079 просмотров и 59 подписчиков с 8 живых). Большая часть охвата пришла с одного «залетевшего» ' +
+      'аккаунта — это ориентир, не гарантия. <b>Затраты</b>: телефон $25, аккаунт $2.5, софт $175 разово, ' +
+      'Claude $200/мес, содержание ≈ 0. <b>Доход не показан намеренно</b> — модель монетизации ещё не определена.';
   }
 
   function line(k, v, total){
@@ -267,7 +294,7 @@
     });
   })();
 
-  buildSeg();
+  buildSegs();
   render();
 })();
 </script>
